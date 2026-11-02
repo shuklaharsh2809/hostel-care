@@ -4,6 +4,7 @@ import { Avatar, Badge, Button, ButtonLink, Card, EmptyState, Input, PageHeader,
 import { api } from "@/lib/api";
 import type { BranchWithCounts, Paged, StudentListRow } from "@/lib/types";
 import { formatDate, money } from "@/lib/format";
+import { studentPhoto } from "@/lib/photo";
 
 export const metadata: Metadata = { title: "Students" };
 const PAGE_SIZE = 25;
@@ -78,7 +79,7 @@ export default async function StudentsPage({
                 <tr key={s.id} className="hover:bg-ink-50/50">
                   <Td>
                     <Link href={`/app/students/${s.id}`} className="flex items-center gap-3">
-                      <Avatar name={s.fullName} />
+                      <Avatar name={s.fullName} src={studentPhoto(s.id, s.photoUrl)} />
                       <span>
                         <span className="font-medium text-ink-900 hover:text-brand-700">{s.fullName}</span>
                         <span className="block text-xs text-ink-500">{s.phone ?? "—"}</span>

@@ -1,8 +1,27 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { branchScope, CurrentUser, requireManage, scoped, type AuthUser } from "../../common/auth.js";
 import { todayISO } from "../../common/format.js";
+import { deleteFile, MIME_BY_EXT, readStoredFile, saveFile, sniffImage } from "../../common/uploads.js";
 import { optDate, optText, paise } from "../../common/schemas.js";
 import { db } from "../../db/index.js";
 import { branches, invoices, messPlans, rooms, students } from "../../db/schema.js";
@@ -41,6 +60,9 @@ const ListQuery = z.object({
 });
 
 const StatusBody = z.object({ status: z.enum(["active", "left"]) });
+const RoomAssignBody = z.object({ roomId: z.string().uuid().nullable() });
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+type UploadedImage = { buffer: Buffer; size: number };
 
 /** Branch, room and mess plan must belong to this org and to each other; room must have a free bed. */
 async function validateRefs(user: AuthUser, d: StudentBody, currentStudentId?: string) {
@@ -92,6 +114,7 @@ export class StudentsController {
         .select({
           id: students.id,
           fullName: students.fullName,
+          photoUrl: students.photoUrl,
           phone: students.phone,
           institution: students.institution,
           course: students.course,
@@ -185,5 +208,68 @@ export class StudentsController {
       .returning();
     if (!s) throw new NotFoundException("Student not found");
     return s;
+  }
+
+  /** Put a student in a room (or take them out with roomId: null). Room must be in their branch and have a free bed. */
+  @Post(":id/room")
+  async assignRoom(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string, @Body({ schema: RoomAssignBody }) { roomId }: z.infer<typeof RoomAssignBody>) {
+    requireManage(user);
+    const [s] = await db.select().from(students).where(and(eq(students.id, id), scoped(user, students.orgId, students.branchId)));
+    if (!s) throw new NotFoundException("Student not found");
+    if (s.status !== "active") throw new BadRequestException("Only students who are staying can be given a room");
+    let monthlyRent = s.monthlyRent;
+    if (roomId) {
+      const [room] = await db.select().from(rooms).where(and(eq(rooms.id, roomId), eq(rooms.branchId, s.branchId)));
+      if (!room) throw new BadRequestException("That room is not in this student's branch");
+      const [occ] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(students)
+        .where(and(eq(students.roomId, roomId), eq(students.status, "active"), sql`${students.id} <> ${id}`));
+      if ((occ?.n ?? 0) >= room.capacity) throw new BadRequestException(`Room ${room.number} is already full`);
+      if (monthlyRent === 0) monthlyRent = room.monthlyRent;
+    }
+    const [updated] = await db.update(students).set({ roomId, monthlyRent }).where(eq(students.id, id)).returning();
+    return updated;
+  }
+
+  /** Upload a profile photo (JPEG/PNG/WebP, max 2 MB). Replaces any previous photo. */
+  @Post(":id/photo")
+  @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } }))
+  async uploadPhoto(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string, @UploadedFile() file: UploadedImage | undefined) {
+    requireManage(user);
+    if (!file) throw new BadRequestException("Choose a photo to upload");
+    const kind = sniffImage(file.buffer);
+    if (!kind) throw new BadRequestException("Photo must be a JPEG, PNG or WebP image");
+    const [s] = await db.select().from(students).where(and(eq(students.id, id), scoped(user, students.orgId, students.branchId)));
+    if (!s) throw new NotFoundException("Student not found");
+
+    const key = `photos/${user.orgId}/${id}-${Date.now()}.${kind.ext}`;
+    await saveFile(key, file.buffer);
+    await db.update(students).set({ photoUrl: key }).where(eq(students.id, id));
+    if (s.photoUrl) await deleteFile(s.photoUrl);
+    return { photoUrl: key };
+  }
+
+  @Get(":id/photo")
+  async photo(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
+    const [s] = await db
+      .select({ photoUrl: students.photoUrl })
+      .from(students)
+      .where(and(eq(students.id, id), scoped(user, students.orgId, students.branchId)));
+    if (!s?.photoUrl) throw new NotFoundException("No photo");
+    const data = await readStoredFile(s.photoUrl).catch(() => null);
+    if (!data) throw new NotFoundException("No photo");
+    const ext = s.photoUrl.split(".").pop() ?? "jpg";
+    return new StreamableFile(data, { type: MIME_BY_EXT[ext] ?? "application/octet-stream", length: data.length });
+  }
+
+  @Delete(":id/photo")
+  @HttpCode(204)
+  async removePhoto(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
+    requireManage(user);
+    const [s] = await db.select().from(students).where(and(eq(students.id, id), scoped(user, students.orgId, students.branchId)));
+    if (!s) throw new NotFoundException("Student not found");
+    await db.update(students).set({ photoUrl: null }).where(eq(students.id, id));
+    if (s.photoUrl) await deleteFile(s.photoUrl);
   }
 }

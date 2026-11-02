@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, FileText, LayoutDashboard, Menu, Settings, UserCog, Users, UtensilsCrossed, X } from "lucide-react";
+import { Building2, FileText, LayoutDashboard, Menu, Search, Settings, UserCog, Users, UtensilsCrossed, X } from "lucide-react";
+import { SearchTrigger, useOpenPalette } from "./command-palette";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -33,6 +34,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const openPalette = useOpenPalette();
   const items = role === "owner" ? [...nav, ...ownerNav] : nav;
 
   const content = (
@@ -48,6 +50,9 @@ export function Sidebar({
       <div className="mx-3 mb-4 rounded-lg bg-brand-50 px-3 py-2.5">
         <p className="text-xs text-brand-700/80">Organization</p>
         <p className="truncate text-sm font-semibold text-brand-900">{orgName}</p>
+      </div>
+      <div className="mb-3 px-3">
+        <SearchTrigger className="w-full" />
       </div>
       <nav className="flex-1 space-y-0.5 px-3">
         {items.map((item) => {
@@ -82,9 +87,14 @@ export function Sidebar({
     <>
       <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200 bg-white px-4 lg:hidden">
         <Logo />
-        <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-lg p-2 hover:bg-ink-100">
-          <Menu className="size-5" />
-        </button>
+        <div className="flex gap-1">
+          <button onClick={openPalette} aria-label="Search" className="rounded-lg p-2 hover:bg-ink-100">
+            <Search className="size-5" />
+          </button>
+          <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-lg p-2 hover:bg-ink-100">
+            <Menu className="size-5" />
+          </button>
+        </div>
       </header>
       <aside className="no-print fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-ink-200 bg-white lg:block">{content}</aside>
       {open && (

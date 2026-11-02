@@ -32,7 +32,8 @@ export async function api<T>(path: string, { method = "GET", body, query, auth =
   for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
 
   const headers: Record<string, string> = { accept: "application/json" };
-  if (body !== undefined) headers["content-type"] = "application/json";
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers["content-type"] = "application/json";
   if (auth) {
     const token = (await cookies()).get(TOKEN_COOKIE)?.value;
     if (!token) redirect("/login");
@@ -41,7 +42,7 @@ export async function api<T>(path: string, { method = "GET", body, query, auth =
 
   let res: Response;
   try {
-    res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" });
+    res = await fetch(url, { method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body), cache: "no-store" });
   } catch {
     throw new ApiError(503, "Can't reach the HostelCare API. Is the backend running?");
   }

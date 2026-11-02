@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { Button, Notice } from "./ui";
 
 export type FormState = { error?: string; success?: string; nonce?: number } | undefined;
@@ -25,18 +26,15 @@ export function ActionForm({
   const [state, formAction] = useActionState(action, undefined);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (resetOnSuccess && state?.success) ref.current?.reset();
+    if (!state?.success) return;
+    toast.success(state.success);
+    if (resetOnSuccess) ref.current?.reset();
   }, [state, resetOnSuccess]);
   return (
     <form ref={ref} action={formAction} className={className}>
       {state?.error && (
         <div className="mb-4">
           <Notice tone="error">{state.error}</Notice>
-        </div>
-      )}
-      {state?.success && (
-        <div className="mb-4">
-          <Notice tone="success">{state.success}</Notice>
         </div>
       )}
       {children}

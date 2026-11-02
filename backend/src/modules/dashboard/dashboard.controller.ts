@@ -55,9 +55,11 @@ export class DashboardController {
         .from(invoices)
         .innerJoin(students, eq(students.id, invoices.studentId))
         .where(scoped(user, invoices.orgId, invoices.branchId))
-        .orderBy(desc(invoices.createdAt))
+        .orderBy(desc(invoices.issueDate), desc(invoices.createdAt))
         .limit(6),
     ]);
+
+    const [trend, aging] = await Promise.all([this.trend(user, today), this.aging(user, today)]);
 
     const beds = new Map(roomAgg.map((r) => [r.branchId, r.beds]));
     const counts = new Map(studentAgg.map((r) => [r.branchId, r.count]));
@@ -87,6 +89,52 @@ export class DashboardController {
         dues: dues.get(b.id) ?? 0,
       })),
       recentInvoices,
+      trend,
+      aging,
     };
+  }
+
+  /** Billed (by issue month, excluding void) vs collected (by payment month) for the last 6 months, oldest first. */
+  private async trend(user: AuthUser, today: string) {
+    const months: string[] = [];
+    const [y, m] = today.split("-").map(Number) as [number, number];
+    for (let i = 5; i >= 0; i--) months.push(new Date(Date.UTC(y, m - 1 - i, 1)).toISOString().slice(0, 7));
+    const from = `${months[0]}-01`;
+
+    const [billed, collected] = await Promise.all([
+      db
+        .select({ month: sql<string>`to_char(${invoices.issueDate}, 'YYYY-MM')`, total: sql<number>`coalesce(sum(${invoices.total}),0)::int` })
+        .from(invoices)
+        .where(and(scoped(user, invoices.orgId, invoices.branchId), gte(invoices.issueDate, from), sql`${invoices.status} <> 'void'`))
+        .groupBy(sql`1`),
+      db
+        .select({ month: sql<string>`to_char(${payments.paidOn}, 'YYYY-MM')`, total: sql<number>`coalesce(sum(${payments.amount}),0)::int` })
+        .from(payments)
+        .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+        .where(and(scoped(user, invoices.orgId, invoices.branchId), gte(payments.paidOn, from)))
+        .groupBy(sql`1`),
+    ]);
+    const b = new Map(billed.map((r) => [r.month, r.total]));
+    const c = new Map(collected.map((r) => [r.month, r.total]));
+    return months.map((month) => ({ month, billed: b.get(month) ?? 0, collected: c.get(month) ?? 0 }));
+  }
+
+  /** Unpaid balance grouped by how late it is. */
+  private async aging(user: AuthUser, today: string) {
+    const [row] = await db
+      .select({
+        notDue: sql<number>`coalesce(sum(${invoices.total} - ${invoices.amountPaid}) filter (where ${invoices.dueDate} is null or ${invoices.dueDate} >= ${today}),0)::int`,
+        d1to30: sql<number>`coalesce(sum(${invoices.total} - ${invoices.amountPaid}) filter (where ${invoices.dueDate} < ${today} and ${invoices.dueDate} >= (${today}::date - 30)),0)::int`,
+        d31to60: sql<number>`coalesce(sum(${invoices.total} - ${invoices.amountPaid}) filter (where ${invoices.dueDate} < (${today}::date - 30) and ${invoices.dueDate} >= (${today}::date - 60)),0)::int`,
+        d60plus: sql<number>`coalesce(sum(${invoices.total} - ${invoices.amountPaid}) filter (where ${invoices.dueDate} < (${today}::date - 60)),0)::int`,
+      })
+      .from(invoices)
+      .where(and(scoped(user, invoices.orgId, invoices.branchId), inArray(invoices.status, ["issued", "partially_paid"])));
+    return [
+      { key: "notDue", label: "Not yet due", amount: row?.notDue ?? 0 },
+      { key: "1-30", label: "1–30 days late", amount: row?.d1to30 ?? 0 },
+      { key: "31-60", label: "31–60 days late", amount: row?.d31to60 ?? 0 },
+      { key: "60+", label: "60+ days late", amount: row?.d60plus ?? 0 },
+    ];
   }
 }

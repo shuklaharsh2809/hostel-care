@@ -4,12 +4,13 @@ import { api } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { formatDate, money } from "@/lib/format";
 import type { Dashboard as DashboardData } from "@/lib/types";
+import { AgingBars, TrendChart } from "@/components/charts";
 import { Avatar, ButtonLink, Card, CardHeader, InvoiceStatusBadge, Notice, PageHeader, StatCard, Table, Td, Th } from "@/components/ui";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ welcome?: string; error?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
-  const { totals, branches: branchRows, recentInvoices } = await api<DashboardData>("/dashboard");
+  const { totals, branches: branchRows, recentInvoices, trend, aging } = await api<DashboardData>("/dashboard");
   const overdue = { count: totals.overdueCount, due: totals.overdueAmount };
 
   return (
@@ -50,6 +51,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           icon={<IndianRupee className="size-5" />}
           tone={overdue.count ? "rose" : "amber"}
         />
+      </div>
+
+      <div className="mt-6 grid items-start gap-6 xl:grid-cols-5">
+        <Card className="xl:col-span-3">
+          <CardHeader title="Billed vs collected" description="Last 6 months, all branches you can see" />
+          <TrendChart data={trend} />
+        </Card>
+        <Card className="xl:col-span-2">
+          <CardHeader
+            title="Dues by age"
+            description="How late unpaid balances are"
+            action={<ButtonLink href="/app/invoices?status=overdue" variant="ghost">Overdue</ButtonLink>}
+          />
+          <AgingBars buckets={aging} />
+        </Card>
       </div>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-5">

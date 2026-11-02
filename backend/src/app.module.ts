@@ -7,6 +7,7 @@ import { BranchesController } from "./modules/branches/branches.controller.js";
 import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
 import { InvoicesController } from "./modules/invoices/invoices.controller.js";
 import { MessController } from "./modules/mess/mess.controller.js";
+import { SearchController } from "./modules/search/search.controller.js";
 import { StudentsController } from "./modules/students/students.controller.js";
 import { TeamController } from "./modules/team/team.controller.js";
 
@@ -36,6 +37,7 @@ function jwtSecret() {
     MessController,
     InvoicesController,
     TeamController,
+    SearchController,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }],
 })

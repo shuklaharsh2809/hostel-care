@@ -40,7 +40,15 @@ export type Room = {
   capacity: number;
   monthlyRent: number;
 };
-export type RoomWithOccupants = Room & { occupants: { id: string; name: string }[] };
+export type Occupant = { id: string; name: string; photoUrl: string | null };
+export type RoomWithOccupants = Room & { occupants: Occupant[] };
+export type BranchDetail = {
+  branch: Branch;
+  rooms: RoomWithOccupants[];
+  activeStudents: number;
+  studentsWithoutRoom: number;
+  unassignedStudents: Occupant[];
+};
 
 export type Student = {
   id: string;
@@ -49,6 +57,7 @@ export type Student = {
   messPlanId: string | null;
   status: "active" | "left";
   fullName: string;
+  photoUrl: string | null;
   gender: "male" | "female" | "other" | null;
   dateOfBirth: string | null;
   phone: string | null;
@@ -108,11 +117,15 @@ export type Dashboard = {
   };
   branches: { id: string; name: string; code: string; city: string | null; students: number; beds: number; dues: number }[];
   recentInvoices: { id: string; number: string; total: number; status: InvoiceStatus; issueDate: string; studentName: string }[];
+  trend: TrendPoint[];
+  aging: { key: string; label: string; amount: number }[];
 };
+export type TrendPoint = { month: string; billed: number; collected: number };
 
 export type StudentListRow = {
   id: string;
   fullName: string;
+  photoUrl: string | null;
   phone: string | null;
   institution: string | null;
   course: string | null;
@@ -171,3 +184,9 @@ export type InvoiceStudentOption = {
 };
 
 export type TeamMember = { id: string; name: string; email: string; role: Role; branchId: string | null; branchName: string | null };
+
+export type SearchResults = {
+  students: { id: string; fullName: string; phone: string | null; status: "active" | "left"; photoUrl: string | null; roomNumber: string | null; branchCode: string }[];
+  invoices: { id: string; number: string; total: number; status: InvoiceStatus; studentName: string }[];
+  branches: { id: string; name: string; code: string; city: string | null }[];
+};

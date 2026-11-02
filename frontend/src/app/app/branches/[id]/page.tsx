@@ -1,30 +1,34 @@
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { createRoom, deleteRoom, updateBranch } from "../actions";
+import { assignRoom } from "../../students/actions";
+import { RoomMap } from "@/components/room-map";
 import { BranchFields } from "../branch-fields";
 import { ActionForm, ConfirmButton, SubmitButton } from "@/components/action-form";
 import { Badge, ButtonLink, Card, CardHeader, Field, Input, Notice, PageHeader, Select, StatCard, Table, Td, Th } from "@/components/ui";
 import { apiOrNotFound } from "@/lib/api";
 import { canManage, requireUser } from "@/lib/auth";
 import { money } from "@/lib/format";
-import type { Branch, RoomWithOccupants } from "@/lib/types";
+import type { BranchDetail } from "@/lib/types";
 
 export default async function BranchDetail({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; view?: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const { error } = await searchParams;
-  const { branch, rooms: roomRows, activeStudents, studentsWithoutRoom: unassigned } = await apiOrNotFound<{
-    branch: Branch;
-    rooms: RoomWithOccupants[];
-    activeStudents: number;
-    studentsWithoutRoom: number;
-  }>(`/branches/${id}`);
+  const { error, view } = await searchParams;
+  const showTable = view === "table";
+  const {
+    branch,
+    rooms: roomRows,
+    activeStudents,
+    studentsWithoutRoom: unassigned,
+    unassignedStudents,
+  } = await apiOrNotFound<BranchDetail>(`/branches/${id}`);
   const beds = roomRows.reduce((s, r) => s + r.capacity, 0);
   const vacant = roomRows.reduce((s, r) => s + Math.max(0, r.capacity - r.occupants.length), 0);
   const manage = canManage(user);
@@ -64,7 +68,38 @@ export default async function BranchDetail({
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Rooms" description="Beds, rent and who's staying" />
+          <CardHeader
+            title="Rooms"
+            description="Beds, rent and who's staying"
+            action={
+              <div className="flex rounded-lg bg-ink-100 p-0.5 text-xs font-medium">
+                {[
+                  ["map", "Bed map"],
+                  ["table", "Table"],
+                ].map(([v, label]) => (
+                  <Link
+                    key={v}
+                    href={`/app/branches/${id}${v === "table" ? "?view=table" : ""}`}
+                    className={(showTable ? v === "table" : v === "map") ? "rounded-md bg-white px-2.5 py-1 text-ink-900 shadow-sm" : "rounded-md px-2.5 py-1 text-ink-500 hover:text-ink-800"}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            }
+          />
+          {!showTable ? (
+            <RoomMap
+              branchId={id}
+              rooms={roomRows}
+              unassigned={unassignedStudents}
+              canManage={manage}
+              assign={async (studentId, roomId) => {
+                "use server";
+                return assignRoom(studentId, roomId, id);
+              }}
+            />
+          ) : (
           <Table>
             <thead>
               <tr>
@@ -124,6 +159,7 @@ export default async function BranchDetail({
               )}
             </tbody>
           </Table>
+          )}
         </Card>
 
         <div className="space-y-6">

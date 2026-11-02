@@ -201,7 +201,11 @@ export function Td({ children, className, colSpan }: { children?: ReactNode; cla
   return <td colSpan={colSpan} className={cx("border-b border-ink-100 px-4 py-3 align-middle text-ink-700", className)}>{children}</td>;
 }
 
-export function Avatar({ name, className }: { name: string; className?: string }) {
+export function Avatar({ name, src, className }: { name: string; src?: string | null; className?: string }) {
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={name} className={cx("size-9 shrink-0 rounded-full object-cover ring-1 ring-ink-900/5", className)} />;
+  }
   const palette = ["bg-brand-100 text-brand-800", "bg-amber-100 text-amber-800", "bg-sky-100 text-sky-800", "bg-rose-100 text-rose-800", "bg-violet-100 text-violet-800"];
   const idx = [...name].reduce((s, c) => s + c.charCodeAt(0), 0) % palette.length;
   const letters = name
@@ -211,8 +215,14 @@ export function Avatar({ name, className }: { name: string; className?: string }
     .map((p) => p[0]!.toUpperCase())
     .join("");
   return (
-    <span className={cx("grid size-9 shrink-0 place-items-center rounded-full text-xs font-semibold", palette[idx], className)}>{letters}</span>
+    <span aria-hidden className={cx("grid size-9 shrink-0 place-items-center rounded-full text-xs font-semibold", palette[idx], className)}>
+      {letters}
+    </span>
   );
+}
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cx("animate-pulse rounded-md bg-ink-200/60", className)} />;
 }
 
 export function Notice({ tone = "info", children }: { tone?: "info" | "error" | "success"; children: ReactNode }) {

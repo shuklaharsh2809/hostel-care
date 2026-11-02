@@ -89,15 +89,19 @@ export class BranchesController {
     const [roomRows, occupants] = await Promise.all([
       db.select().from(rooms).where(eq(rooms.branchId, id)).orderBy(asc(rooms.floor), asc(rooms.number)),
       db
-        .select({ id: students.id, name: students.fullName, roomId: students.roomId })
+        .select({ id: students.id, name: students.fullName, roomId: students.roomId, photoUrl: students.photoUrl })
         .from(students)
         .where(and(eq(students.branchId, id), eq(students.status, "active"))),
     ]);
     return {
       branch,
-      rooms: roomRows.map((r) => ({ ...r, occupants: occupants.filter((s) => s.roomId === r.id).map(({ id, name }) => ({ id, name })) })),
+      rooms: roomRows.map((r) => ({
+        ...r,
+        occupants: occupants.filter((s) => s.roomId === r.id).map(({ id, name, photoUrl }) => ({ id, name, photoUrl })),
+      })),
       activeStudents: occupants.length,
       studentsWithoutRoom: occupants.filter((s) => !s.roomId).length,
+      unassignedStudents: occupants.filter((s) => !s.roomId).map(({ id, name, photoUrl }) => ({ id, name, photoUrl })),
     };
   }
 

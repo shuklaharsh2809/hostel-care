@@ -58,3 +58,34 @@ export async function setStudentStatus(studentId: string, status: "active" | "le
   await api(`/students/${studentId}/status`, { method: "POST", body: { status } });
   revalidatePath(`/app/students/${studentId}`);
 }
+
+export async function uploadStudentPhoto(studentId: string, fd: FormData): Promise<FormState> {
+  const file = fd.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo to upload" };
+  const res = await attempt(async () => {
+    const body = new FormData();
+    body.set("photo", file, file.name || "photo.jpg");
+    await api(`/students/${studentId}/photo`, { method: "POST", body });
+  });
+  if (res?.error) return res;
+  revalidatePath(`/app/students/${studentId}`);
+  return { success: "Photo updated" };
+}
+
+export async function removeStudentPhoto(studentId: string): Promise<FormState> {
+  const res = await attempt(async () => {
+    await api(`/students/${studentId}/photo`, { method: "DELETE" });
+  });
+  if (res?.error) return res;
+  revalidatePath(`/app/students/${studentId}`);
+  return { success: "Photo removed" };
+}
+
+export async function assignRoom(studentId: string, roomId: string | null, branchId: string): Promise<FormState> {
+  const res = await attempt(async () => {
+    await api(`/students/${studentId}/room`, { method: "POST", body: { roomId } });
+  });
+  if (res?.error) return res;
+  revalidatePath(`/app/branches/${branchId}`);
+  return { success: roomId ? "Room assigned" : "Removed from room" };
+}

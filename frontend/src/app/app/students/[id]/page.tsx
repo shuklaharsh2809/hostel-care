@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { setStudentStatus } from "../actions";
+import { removeStudentPhoto, setStudentStatus, uploadStudentPhoto } from "../actions";
 import { ConfirmButton } from "@/components/action-form";
+import { PhotoUploader } from "@/components/photo-uploader";
 import { Avatar, Badge, ButtonLink, Card, CardHeader, InvoiceStatusBadge, Notice, PageHeader, StatCard, Table, Td, Th } from "@/components/ui";
 import { apiOrNotFound } from "@/lib/api";
 import { canManage, requireUser } from "@/lib/auth";
 import { formatDate, money } from "@/lib/format";
+import { studentPhoto } from "@/lib/photo";
 import type { StudentDetail as StudentDetailData } from "@/lib/types";
 
 export default async function StudentDetail({
@@ -29,7 +31,7 @@ export default async function StudentDetail({
         back={{ href: "/app/students", label: "Students" }}
         title={
           <span className="flex items-center gap-3">
-            <Avatar name={s.fullName} className="size-11 text-sm" />
+            <Avatar name={s.fullName} src={studentPhoto(s.id, s.photoUrl)} className="size-11 text-sm" />
             {s.fullName}
             {s.status === "left" ? <Badge>Left {formatDate(s.leaveDate)}</Badge> : <Badge tone="green">Staying</Badge>}
           </span>
@@ -67,6 +69,15 @@ export default async function StudentDetail({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-1">
+          <Card className="p-5">
+            <PhotoUploader
+              name={s.fullName}
+              src={studentPhoto(s.id, s.photoUrl)}
+              canEdit={manage}
+              upload={uploadStudentPhoto.bind(null, s.id)}
+              remove={removeStudentPhoto.bind(null, s.id)}
+            />
+          </Card>
           <Card>
             <CardHeader title="Stay" />
             <Dl

@@ -168,7 +168,9 @@ async function main() {
           .returning();
 
         // Two months of invoices: last month (mostly paid), this month (mixed)
-        for (const monthsAgo of [1, 0]) {
+        // Up to six months of invoices, starting from the month the student joined
+        for (const monthsAgo of [5, 4, 3, 2, 1, 0]) {
+          if (monthsAgo > joinMonthsAgo) continue;
           const d = new Date();
           d.setMonth(d.getMonth() - monthsAgo, 1);
           const issue = d.toISOString().slice(0, 10);
@@ -187,7 +189,10 @@ async function main() {
               dueDate: due.toISOString().slice(0, 10),
               periodLabel: label,
             });
-            const payMode = monthsAgo === 1 ? (i % 7 === 0 ? "partial" : "full") : i % 3 === 0 ? "full" : i % 3 === 1 ? "partial" : "none";
+            const payMode =
+              monthsAgo >= 2 ? (i % 13 === 0 && monthsAgo === 2 ? "partial" : "full")
+              : monthsAgo === 1 ? (i % 7 === 0 ? "partial" : "full")
+              : i % 3 === 0 ? "full" : i % 3 === 1 ? "partial" : "none";
             if (payMode !== "none") {
               await tx.insert(s.payments).values({
                 orgId: org!.id,
@@ -195,7 +200,8 @@ async function main() {
                 amount: payMode === "full" ? inv.total : Math.round(inv.total / 2),
                 method: pick(["upi", "cash", "bank_transfer"] as const, i),
                 reference: `TXN${100000 + i * 13 + monthsAgo}`,
-                paidOn: issue,
+                // Paid within the first ~9 days of the month (never in the future)
+                paidOn: monthsAgo === 0 ? issue : new Date(new Date(issue).getTime() + (i % 9) * 86400000).toISOString().slice(0, 10),
               });
               await refreshInvoicePaymentStatus(tx, org!.id, inv.id);
             }
