@@ -1,26 +1,14 @@
 {
-  "name": "hostel-care-tmp",
-  "version": "0.1.0",
+  "name": "hostel-care",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.4.4",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "setup": "npm run setup --prefix backend",
+    "dev": "concurrently -k -n api,web -c green,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix frontend"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^9.2.1"
   }
 }

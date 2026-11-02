@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eefbf6;
+  --color-brand-100: #d5f5e8;
+  --color-brand-200: #aeead5;
+  --color-brand-300: #78d9bc;
+  --color-brand-400: #40c09e;
+  --color-brand-500: #1ca585;
+  --color-brand-600: #0f856c;
+  --color-brand-700: #0d6a58;
+  --color-brand-800: #0e5448;
+  --color-brand-900: #0d453c;
+  --color-brand-950: #052722;
+
+  --color-ink-50: #f7f8f8;
+  --color-ink-100: #eef0f1;
+  --color-ink-200: #dde1e3;
+  --color-ink-300: #c3c9cd;
+  --color-ink-400: #8d979e;
+  --color-ink-500: #67727a;
+  --color-ink-600: #4f5961;
+  --color-ink-700: #3e464d;
+  --color-ink-800: #262c31;
+  --color-ink-900: #171b1f;
+
+  --color-sun-400: #fbbf4a;
+  --color-sun-500: #f5a524;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-ink-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+}

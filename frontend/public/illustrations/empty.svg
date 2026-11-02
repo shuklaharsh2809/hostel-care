@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" fill="none">
+  <!-- Original illustration for HostelCare. Free to use. -->
+  <ellipse cx="100" cy="124" rx="74" ry="10" fill="#eef0f1"/>
+  <rect x="44" y="40" width="112" height="78" rx="10" fill="#d5f5e8"/>
+  <path d="M44 62 H156" stroke="#aeead5" stroke-width="2"/>
+  <rect x="58" y="20" width="84" height="64" rx="8" fill="#fff" stroke="#dde1e3" stroke-width="2"/>
+  <rect x="70" y="34" width="44" height="6" rx="3" fill="#c3c9cd"/>
+  <rect x="70" y="46" width="60" height="6" rx="3" fill="#eef0f1"/>
+  <rect x="70" y="58" width="36" height="6" rx="3" fill="#eef0f1"/>
+  <path d="M44 72 H82 L90 84 H110 L118 72 H156 V108 A10 10 0 0 1 146 118 H54 A10 10 0 0 1 44 108 Z" fill="#1ca585"/>
+  <circle cx="160" cy="28" r="6" fill="#fbbf4a"/>
+  <circle cx="36" cy="44" r="4" fill="#78d9bc"/>
+</svg>

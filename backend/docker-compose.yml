@@ -1,0 +1,17 @@
+# Optional: run a real PostgreSQL locally instead of the embedded PGlite.
+#   docker compose up -d
+#   DATABASE_URL=postgres://hostelcare:hostelcare@localhost:5432/hostelcare  (put in .env.local)
+#   npm run setup
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hostelcare
+      POSTGRES_PASSWORD: hostelcare
+      POSTGRES_DB: hostelcare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
